@@ -1,0 +1,285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TCR-HLA Query Tool - Interactive Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Roboto+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <!-- Chosen Palette: Warm Neutrals (Stone, Amber, with a Purple accent) -->
+    <!-- 
+      Application Structure Plan: A task-oriented, tab-based single-page application. The structure is designed for a developer audience who need to quickly find specific commands. Users can immediately select their task ("By Allele", "By Single TCR", "By TCR Table") or look up details in the "Arguments Reference". This is more intuitive than a linear document, as it groups all necessary information—description, mandatory arguments, and a copyable example—for a single task in one view. This minimizes cognitive load and supports the user's goal of running a specific command efficiently.
+    -->
+    <!-- 
+      Visualization & Content Choices: 
+      - Report Info: Full tool documentation. -> Goal: Make technical docs easy to navigate and use. -> Viz/Presentation Method: The core "visualization" is the interactive tabbed layout. Content is presented in styled cards with clear typography. Code examples use a monospace font in dedicated blocks. A full HTML table is used for the arguments reference for scannability. -> Interaction: 1) Tab-based navigation to show/hide content sections. 2) "Copy to Clipboard" buttons for all code examples, a key usability feature for developers. -> Justification: This approach transforms a static document into a practical utility, allowing users to jump to a specific task, get the command, and copy it. The full argument table serves as a handy, consolidated reference. -> Library/Method: Vanilla JavaScript for all interactions (tab switching, copy-to-clipboard). Tailwind CSS for all styling and layout.
+    -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+
+    <style>
+        body {
+            background-color: #f8f7f6;
+            font-family: 'Inter', sans-serif;
+        }
+        .code-block, .code-inline {
+            font-family: 'Roboto Mono', monospace;
+        }
+        .tab-btn {
+            transition: all 0.3s ease-in-out;
+        }
+        .tab-btn.active {
+            border-color: #a855f7; /* Purple-500 */
+            color: #a855f7;
+            background-color: #f3e8ff;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
+        .code-block {
+            background-color: #1f2937;
+            color: #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1rem;
+            position: relative;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+        .copy-btn {
+            position: absolute;
+            top: 0.75rem;
+            right: 0.75rem;
+            background-color: #4b5563;
+            color: white;
+            border: none;
+            padding: 0.35rem 0.75rem;
+            border-radius: 0.375rem;
+            cursor: pointer;
+            font-size: 0.875rem;
+            opacity: 0;
+            transition: all 0.2s ease;
+        }
+        .code-block:hover .copy-btn {
+            opacity: 0.8;
+        }
+        .copy-btn:hover {
+            opacity: 1;
+            background-color: #6b7280;
+        }
+        .copy-btn-copied {
+            background-color: #16a34a;
+        }
+    </style>
+</head>
+<body class="text-gray-800 antialiased">
+
+    <div class="container mx-auto p-4 sm:p-6 lg:p-8 max-w-6xl">
+        
+        <header class="text-center mb-10">
+            <h1 class="text-4xl sm:text-5xl font-bold text-gray-900 tracking-tight">TCR-HLA Query Tool</h1>
+            <p class="mt-3 text-lg text-gray-600 max-w-3xl mx-auto">An interactive guide for the command-line utility. Select a query type below to see usage details and copy-paste examples.</p>
+        </header>
+
+        <main class="bg-white p-4 sm:p-6 rounded-2xl shadow-lg border border-gray-200">
+            
+            <div id="welcome" class="mb-6 p-5 bg-purple-50 rounded-lg border border-purple-200 text-purple-800">
+                <h2 class="text-xl font-semibold mb-2">Welcome!</h2>
+                <p>This tool facilitates interaction with TCR-HLA association databases. It streamlines extracting TCR data based on an HLA allele, a single TCR sequence, or a batch of TCRs from a table. The results are outputted to a TSV file.</p>
+            </div>
+
+            <!-- Tabs Navigation -->
+            <div class="mb-6 border-b border-gray-200">
+                <nav class="-mb-px flex flex-wrap gap-x-2 sm:gap-x-4" aria-label="Tabs">
+                    <button data-tab="allele" class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg hover:bg-gray-100 active">
+                        <span class="icon mr-2">🧬</span>Query by HLA Allele
+                    </button>
+                    <button data-tab="single_tcr" class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg hover:bg-gray-100">
+                        <span class="icon mr-2">🔬</span>Query by Single TCR
+                    </button>
+                    <button data-tab="table_tcr" class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg hover:bg-gray-100">
+                        <span class="icon mr-2">📋</span>Query by TCR Table
+                    </button>
+                    <button data-tab="reference" class="tab-btn whitespace-nowrap py-3 px-4 border-b-2 font-medium text-sm rounded-t-lg hover:bg-gray-100">
+                        <span class="icon mr-2">📖</span>Arguments Reference
+                    </button>
+                </nav>
+            </div>
+
+            <!-- Tab Content Panes -->
+            <div id="tab-contents">
+                <!-- Query by HLA Allele -->
+                <div id="allele" class="tab-content active animate-fade-in">
+                    <h3 class="text-2xl font-semibold mb-3">Querying by HLA Allele</h3>
+                    <p class="mb-4 text-gray-600">This mode allows you to retrieve all TCRs from your database that are associated with a specific HLA allele.</p>
+                    <div class="mb-4 p-4 border-l-4 border-amber-400 bg-amber-50 rounded">
+                        <p class="font-semibold text-amber-800">Required Arguments:</p>
+                        <ul class="list-disc list-inside mt-1 text-amber-700">
+                            <li><code class="code-inline bg-amber-100 rounded px-1 py-0.5">--path2database</code></li>
+                            <li><code class="code-inline bg-amber-100 rounded px-1 py-0.5">--input_allele</code></li>
+                            <li><code class="code-inline bg-amber-100 rounded px-1 py-0.5">--path2write_results</code></li>
+                        </ul>
+                    </div>
+                    <p class="mb-2 font-medium">Example Command:</p>
+                    <div class="code-block">
+                        <button class="copy-btn">Copy</button>
+                        <code>python tcr_query_tool.py \<br>&nbsp;&nbsp;&nbsp;&nbsp;--path2database /data/tcr_hla_db \<br>&nbsp;&nbsp;&nbsp;&nbsp;--input_allele HLA-A*02:01 \<br>&nbsp;&nbsp;&nbsp;&nbsp;--path2write_results /results/hla_a0201_matches</code>
+                    </div>
+                </div>
+
+                <!-- Query by Single TCR -->
+                <div id="single_tcr" class="tab-content animate-fade-in">
+                    <h3 class="text-2xl font-semibold mb-3">Querying by a Single TCR</h3>
+                    <p class="mb-4 text-gray-600">This mode is used to find HLA alleles or other associated data for a single, specific TCR sequence. The TCR must be provided in the format <code class="code-inline bg-gray-100 rounded px-1 py-0.5">"v_gene+CDR3+j_gene:format"</code>.</p>
+                    <div class="mb-4 p-4 border-l-4 border-amber-400 bg-amber-50 rounded">
+                        <p class="font-semibold text-amber-800">Required Arguments:</p>
+                        <ul class="list-disc list-inside mt-1 text-amber-700">
+                            <li><code class="code-inline bg-amber-100 rounded px-1 py-0.5">--path2database</code></li>
+                            <li><code class="code-inline bg-amber-100 rounded px-1 py-0.5">--input_tcr</code></li>
+                            <li><code class="code-inline bg-amber-100 rounded px-1 py-0.5">--path2write_results</code></li>
+                        </ul>
+                    </div>
+                    <p class="mb-2 font-medium">Example Command:</p>
+                    <div class="code-block">
+                        <button class="copy-btn">Copy</button>
+                        <code>python tcr_query_tool.py \<br>&nbsp;&nbsp;&nbsp;&nbsp;--path2database /data/tcr_hla_db \<br>&nbsp;&nbsp;&nbsp;&nbsp;--input_tcr "TRBV12-3*01+CASSPGASGYTF+TRBJ2-7*01:IMGT" \<br>&nbsp;&nbsp;&nbsp;&nbsp;--path2write_results /results/single_tcr_match</code>
+                    </div>
+                </div>
+
+                <!-- Query by TCR Table -->
+                <div id="table_tcr" class="tab-content animate-fade-in">
+                    <h3 class="text-2xl font-semibold mb-3">Querying by a Table of TCRs</h3>
+                    <p class="mb-4 text-gray-600">This mode processes a batch of TCRs provided in a TSV file. The input file must contain columns named <code class="code-inline bg-gray-100 rounded px-1 py-0.5">v_gene</code>, <code class="code-inline bg-gray-100 rounded px-1 py-0.5">CDR3</code>, and <code class="code-inline bg-gray-100 rounded px-1 py-0.5">j_gene</code>.</p>
+                    <div class="mb-4 p-4 border-l-4 border-amber-400 bg-amber-50 rounded">
+                        <p class="font-semibold text-amber-800">Required Arguments:</p>
+                        <ul class="list-disc list-inside mt-1 text-amber-700">
+                            <li><code class="code-inline bg-amber-100 rounded px-1 py-0.5">--path2database</code></li>
+                            <li><code class="code-inline bg-amber-100 rounded px-1 py-0.5">--query_tcr_tables</code></li>
+                            <li><code class="code-inline bg-amber-100 rounded px-1 py-0.5">--query_table_format</code></li>
+                            <li><code class="code-inline bg-amber-100 rounded px-1 py-0.5">--path2write_results</code></li>
+                        </ul>
+                    </div>
+                    <p class="mb-2 font-medium">Example Command:</p>
+                    <div class="code-block">
+                        <button class="copy-btn">Copy</button>
+                        <code>python tcr_query_tool.py \<br>&nbsp;&nbsp;&nbsp;&nbsp;--path2database /data/tcr_hla_db \<br>&nbsp;&nbsp;&nbsp;&nbsp;--query_tcr_tables /inputs/my_tcr_list.tsv \<br>&nbsp;&nbsp;&nbsp;&nbsp;--query_table_format Adaptive \<br>&nbsp;&nbsp;&nbsp;&nbsp;--path2write_results /results/batch_query_output</code>
+                    </div>
+                </div>
+                
+                <!-- Arguments Reference -->
+                <div id="reference" class="tab-content animate-fade-in">
+                    <h3 class="text-2xl font-semibold mb-3">Arguments Reference</h3>
+                    <p class="mb-4 text-gray-600">This section provides a detailed description of all available command-line arguments. Mandatory arguments are required for the tool to run, while optional arguments enable specific query modes.</p>
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full border border-gray-200 divide-y divide-gray-200">
+                            <thead class="bg-gray-50">
+                                <tr>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Argument</th>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Type</th>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Requirement</th>
+                                    <th class="py-3 px-4 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">Description</th>
+                                </tr>
+                            </thead>
+                            <tbody class="bg-white divide-y divide-gray-200">
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-4 px-4 whitespace-nowrap"><code class="code-inline text-purple-700 bg-purple-100 rounded px-2 py-1">--path2database</code></td>
+                                    <td class="py-4 px-4"><span class="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">string</span></td>
+                                    <td class="py-4 px-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Mandatory</span></td>
+                                    <td class="py-4 px-4 text-sm text-gray-600">The path to the directory containing your TCR-HLA databases.</td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-4 px-4 whitespace-nowrap"><code class="code-inline text-purple-700 bg-purple-100 rounded px-2 py-1">--path2write_results</code></td>
+                                    <td class="py-4 px-4"><span class="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">string</span></td>
+                                    <td class="py-4 px-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Mandatory</span></td>
+                                    <td class="py-4 px-4 text-sm text-gray-600">The path and filename prefix for the output TSV file(s).</td>
+                                </tr>
+                                 <tr class="hover:bg-gray-50">
+                                    <td class="py-4 px-4 whitespace-nowrap"><code class="code-inline text-purple-700 bg-purple-100 rounded px-2 py-1">--input_allele</code></td>
+                                    <td class="py-4 px-4"><span class="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">string</span></td>
+                                    <td class="py-4 px-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Optional</span></td>
+                                    <td class="py-4 px-4 text-sm text-gray-600">The HLA allele name to query (e.g., 'HLA-A*02:01'). Use for "Query by Allele" mode.</td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-4 px-4 whitespace-nowrap"><code class="code-inline text-purple-700 bg-purple-100 rounded px-2 py-1">--input_tcr</code></td>
+                                    <td class="py-4 px-4"><span class="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">string</span></td>
+                                    <td class="py-4 px-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Optional</span></td>
+                                    <td class="py-4 px-4 text-sm text-gray-600">A single TCR string: "v_gene+CDR3+j_gene:format". Use for "Query by Single TCR" mode.</td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-4 px-4 whitespace-nowrap"><code class="code-inline text-purple-700 bg-purple-100 rounded px-2 py-1">--query_tcr_tables</code></td>
+                                    <td class="py-4 px-4"><span class="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">string</span></td>
+                                    <td class="py-4 px-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Optional</span></td>
+                                    <td class="py-4 px-4 text-sm text-gray-600">Path to a TSV file with TCRs. Must contain 'v_gene', 'CDR3', 'j_gene' columns. Use for "Query by TCR Table" mode.</td>
+                                </tr>
+                                <tr class="hover:bg-gray-50">
+                                    <td class="py-4 px-4 whitespace-nowrap"><code class="code-inline text-purple-700 bg-purple-100 rounded px-2 py-1">--query_table_format</code></td>
+                                    <td class="py-4 px-4"><span class="bg-gray-100 text-gray-800 text-xs font-medium px-2.5 py-0.5 rounded">string</span></td>
+                                    <td class="py-4 px-4"><span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Conditional</span></td>
+                                    <td class="py-4 px-4 text-sm text-gray-600">Gene naming format ('Adaptive' or 'IMGT') in the query table. Mandatory if <code class="code-inline">--query_tcr_tables</code> is used.</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const tabs = document.querySelectorAll('.tab-btn');
+            const tabContents = document.querySelectorAll('.tab-content');
+
+            tabs.forEach(tab => {
+                tab.addEventListener('click', () => {
+                    const target = tab.getAttribute('data-tab');
+
+                    tabs.forEach(t => t.classList.remove('active'));
+                    tab.classList.add('active');
+
+                    tabContents.forEach(content => {
+                        content.classList.remove('active');
+                        if (content.id === target) {
+                            content.classList.add('active');
+                        }
+                    });
+                });
+            });
+
+            const copyButtons = document.querySelectorAll('.copy-btn');
+            copyButtons.forEach(button => {
+                button.addEventListener('click', () => {
+                    const codeBlock = button.nextElementSibling;
+                    const codeToCopy = codeBlock.innerText;
+
+                    // Use execCommand for broader iframe compatibility
+                    const textarea = document.createElement('textarea');
+                    textarea.value = codeToCopy;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    try {
+                        document.execCommand('copy');
+                        button.textContent = 'Copied!';
+                        button.classList.add('copy-btn-copied');
+                    } catch (err) {
+                        button.textContent = 'Failed!';
+                        console.error('Failed to copy text: ', err);
+                    }
+                    document.body.removeChild(textarea);
+
+                    setTimeout(() => {
+                        button.textContent = 'Copy';
+                        button.classList.remove('copy-btn-copied');
+                    }, 2000);
+                });
+            });
+        });
+    </script>
+
+</body>
+</html>
