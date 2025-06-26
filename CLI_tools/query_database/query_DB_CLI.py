@@ -5,10 +5,10 @@
 @brief: the script is a command line tool that can be used for getting clonotypes from the dataset
 """
 
-## command line interface to query DBs
+## import needed modules
 import argparse
 import os
-import sys
+from query_API import *
 
 def main():
     """
@@ -24,7 +24,14 @@ def main():
         '--path2database',
         type=str,
         required=True,
-        help="[MANDATORY] The path to the TCR-HLA databases."
+        help="[MANDATORY] The path to TCR-HLA databases."
+    )
+    parser.add_argument(
+        '--database',
+        type=str,
+        required=True,
+        choices=['TRA', 'TRB'],
+        help="[MANDATORY] The specific database to query: 'TRA' for TRA-HLA dataset or 'TRB' for TRB-HLA dataset."
     )
     parser.add_argument(
         '--input_allele',
@@ -95,18 +102,18 @@ def main():
         print("Mode: Querying an HLA allele")
         if args.input_tcr or args.query_tcr_tables or args.query_table_format:
             parser.error(
-                "Error: For HLA allele query, only --path2database, --input_allele, "
+                "Error: For HLA allele query, only --path2database, --database, --input_allele, "
                 "and --path2write_results are expected."
             )
-        # Check specific mandatory args for this mode (path2database and path2write_results are already required=True)
-        # No additional checks needed here as input_allele existence implies this mode.
+        # All mandatory args for this mode are handled by required=True or existence check
+        # No specific extra checks for 'database' here as it's universally required.
 
     # Mode II: Querying a single TCR
     elif is_single_tcr_query:
         print("Mode: Querying a single TCR")
         if args.input_allele or args.query_tcr_tables or args.query_table_format:
             parser.error(
-                "Error: For single TCR query, only --path2database, --input_tcr, "
+                "Error: For single TCR query, only --path2database, --database, --input_tcr, "
                 "and --path2write_results are expected."
             )
         # Basic format check for input_tcr (more robust parsing would be needed in the actual logic)
@@ -120,7 +127,7 @@ def main():
         print("Mode: Querying a table of TCRs")
         if args.input_allele or args.input_tcr:
             parser.error(
-                "Error: For TCR table query, only --path2database, --query_tcr_tables, "
+                "Error: For TCR table query, only --path2database, --database, --query_tcr_tables, "
                 "--query_table_format, and --path2write_results are expected."
             )
         if not args.query_table_format:
@@ -151,21 +158,22 @@ def main():
     # If all validations pass, you can proceed with the core logic
     print("\nAll arguments validated successfully!")
     print(f"Database Path: {args.path2database}")
+    print(f"Database Type: {args.database}")
     print(f"Output Path Prefix: {args.path2write_results}")
 
     if is_allele_query:
         print(f"Querying HLA Allele: {args.input_allele}")
         # Your wiring for HLA allele query goes here
-        # For example: process_hla_allele_query(args.path2database, args.input_allele, args.path2write_results)
+        # For example: process_hla_allele_query(args.path2database, args.database, args.input_allele, args.path2write_results)
     elif is_single_tcr_query:
         print(f"Querying Single TCR: {args.input_tcr}")
         # Your wiring for single TCR query goes here
-        # For example: process_single_tcr_query(args.path2database, args.input_tcr, args.path2write_results)
+        # For example: process_single_tcr_query(args.path2database, args.database, args.input_tcr, args.path2write_results)
     elif is_table_tcr_query:
         print(f"Querying TCR Table: {args.query_tcr_tables}")
         print(f"TCR Table Format: {args.query_table_format}")
         # Your wiring for TCR table query goes here
-        # For example: process_tcr_table_query(args.path2database, args.query_tcr_tables, args.query_table_format, args.path2write_results)
+        # For example: process_tcr_table_query(args.path2database, args.database, args.query_tcr_tables, args.query_table_format, args.path2write_results)
 
 if __name__ == "__main__":
     main()

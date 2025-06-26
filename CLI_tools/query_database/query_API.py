@@ -7,20 +7,23 @@ either it can query the HLA restriction associated with a given HLA or the TCR a
 import pandas as pd
 import numpy as np
 import Levenshtein
-from gene_formating_converter import imgt_to_adaptive_builder, adaptive_to_imgt_builder
+from CLI_tools.query_database.gene_formating_converter import imgt_to_adaptive_builder, adaptive_to_imgt_builder
 
-DATABASE_DIR='.'
 
 ## Define the class that acts as an API
 #--------------------------------------
 class HLATCRDBInterface: 
-    def __init__(self,database_name:str):
+    def __init__(self,database_dir: str, database_name:str):
+        """
+        database_dir (str, mandatory): the path to where the database is locatted
+        database_name (str, madatory): the name of the database, can be either TRB or TRA depending on database to load
+        """
         match database_name:
             case 'TRB_DB':
-                self._database = pd.read_parquet(f'{DATABASE_DIR}/databases/TRB_database.parquet')
+                self._database = pd.read_parquet(f'{database_dir}/databases/TRB_database.parquet')
                 self._DATA_TYPE = 'TRB'
             case 'TRA_DB':
-                self._database = pd.read_parquet(f'{DATABASE_DIR}/databases/TRA_database.parquet')
+                self._database = pd.read_parquet(f'{database_dir}/databases/TRA_database.parquet')
                 self._DATA_TYPE = 'TRA'
             case _:
                 raise ValueError("unknown database, the model only supports TRB_DB which is the TRB-HLA database and TRA_DB which is the TRA-HLA database")                
