@@ -158,9 +158,6 @@ class HLAPredictor:
         return predicted_HLAs
 
 def translate_prediction_to_tsv(input_dict:Dict[str,Dict[str,np.ndarray]])->pd.DataFrame:
-    """
-    to be written 
-    """
     sample_names = sorted(list(input_dict.keys()))
     column_names = sorted(list(input_dict[sample_names[0]].keys()))
 
@@ -222,9 +219,6 @@ def normalise_by_softmax(input_df:pd.DataFrame)->pd.DataFrame:
     return normalized_probs_per_loci
 
 def translate_probabilities_to_tsv(input_dict:Dict[str,Dict[str,np.ndarray]])->pd.DataFrame:
-    """
-    to be written 
-    """
     sample_names = sorted(list(input_dict.keys()))
     column_names = sorted(list(input_dict[sample_names[0]].keys()))
 
