@@ -7,7 +7,6 @@ either it can query the HLA restriction associated with a given HLA or the TCR a
 import os
 import time
 import pandas as pd
-import numpy as np
 import Levenshtein
 from gene_formating_converter import imgt_to_adaptive_builder, adaptive_to_imgt_builder
 

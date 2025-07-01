@@ -8,7 +8,6 @@
 import argparse
 import pandas as pd
 import numpy as np
-import json
 import os
 import sys
 from gene_formating_converter import *
