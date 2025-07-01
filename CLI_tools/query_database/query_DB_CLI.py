@@ -36,7 +36,8 @@ def main():
     parser.add_argument(
         '--input_allele',
         type=str,
-        help="[OPTIONAL] The HLA allele name (e.g., 'HLA-A*02:01').\n"
+        help="[OPTIONAL] The HLA allele name (e.g., 'A*02:01', 'B*08:01', 'C*07:01', 'DRB1*15:01', 'DQ*01:03+02:07' or 'DP*01:01+04:02').\n\
+              For the HLA-DP and HLLA-DQ alleles, the following format is used to describe allele names:[DQ/DP]*<alpha_allele>+<beta_allele>"
              "  Mandatory for 'Querying an HLA allele' mode."
     )
     parser.add_argument(
@@ -163,17 +164,26 @@ def main():
 
     if is_allele_query:
         print(f"Querying HLA Allele: {args.input_allele}")
-        # Your wiring for HLA allele query goes here
-        # For example: process_hla_allele_query(args.path2database, args.database, args.input_allele, args.path2write_results)
+        hla_interface = HLATCRDBInterface(database_dir=args.path2database,database_name=args.database)
+        associated_clonotypes = hla_interface.get_clonotypes_associated_to_alleles(args.input_allele.replace('*','-'))
+        associated_clonotypes.to_csv(args.path2write_results,sep='\t',index=False)
     elif is_single_tcr_query:
         print(f"Querying Single TCR: {args.input_tcr}")
-        # Your wiring for single TCR query goes here
-        # For example: process_single_tcr_query(args.path2database, args.database, args.input_tcr, args.path2write_results)
+        search_TCR = HLATCRDBInterface(database_dir=args.path2database,database_name=args.database)
+        parsed_tcr,gene_name_format = args.input_tcr.split(':')
+        v_gene, cdr3, j_gene = parsed_tcr.split('+')
+        print(f"Running the search with a default number of three mismatches of amino acids between the query and the resulting database")
+        search_results = search_TCR.get_restricted_clonotypes_matching_a_clonotype(v_gene=v_gene,j_gene=j_gene, format=gene_name_format, CDR3_amino_acids=cdr3, num_mismatches=3)
+        search_results.to_csv(args.path2write_results,sep='\t',index=False)
     elif is_table_tcr_query:
         print(f"Querying TCR Table: {args.query_tcr_tables}")
         print(f"TCR Table Format: {args.query_table_format}")
-        # Your wiring for TCR table query goes here
-        # For example: process_tcr_table_query(args.path2database, args.database, args.query_tcr_tables, args.query_table_format, args.path2write_results)
-
+        search_TCR = HLATCRDBInterface(database_dir=args.path2database,database_name=args.database)
+        print(f"Running the search with a default number of three mismatches of amino acids between the query and the resulting database")
+        search_results = search_TCR.get_restricted_clonotypes_matching_clonotypes(
+            query_clonotypes=pd.read_csv(args.query_tcr_tables,sep='\t'),
+            format=args.query_table_format,num_mismatches=3)
+        search_results.to_csv(args.path2write_results,sep='\t',index=False)
 if __name__ == "__main__":
     main()
+    
