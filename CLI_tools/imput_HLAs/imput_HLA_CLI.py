@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 """
 @author: Hesham ElAbd
 @brief: a tool that can be used for imputing HLA from TCR repertoire
@@ -10,8 +11,8 @@ import numpy as np
 import json
 import os
 import sys
-from CLI_tools.query_database.gene_formating_converter import *
-from CLI_tools.imput_HLAs.impute_HLA_alleles_API import *
+from gene_formating_converter import *
+from impute_HLA_alleles_API import *
 
 # define the function that is doing the work
 #-------------------------------------------
@@ -35,6 +36,10 @@ def validate_arguments(args):
         print(f"Error: Models directory not found at '{args.path2models}'", file=sys.stderr)
         sys.exit(1)
 
+    if (args.normalize_prob) and (not args.return_prob):
+        print("Error: to return normalised probabilities, probabilities needs to be first set, please use the following flag: --return_prob", file=sys.stderr)
+        sys.exit(1)
+
     # Ensure the output directory exists or can be created
     output_dir = os.path.dirname(args.path2write_results)
     if output_dir and not os.path.exists(output_dir):
@@ -48,10 +53,10 @@ def validate_arguments(args):
 def load_repertoire_data(file_path):
     """
     Loads the repertoire data from the given CSV file.
-    Checks for mandatory columns: v_gene, CDR3, j_genes, sample_name.
+    Checks for mandatory columns: v_gene, CDR3, j_gene, sample_name.
     """
     try:
-        df = pd.read_csv(file_path)
+        df = pd.read_csv(file_path,sep='\t')
     except FileNotFoundError:
         print(f"Error: Input file not found at {file_path}", file=sys.stderr)
         sys.exit(1)
@@ -62,7 +67,7 @@ def load_repertoire_data(file_path):
         print(f"Error reading CSV file {file_path}: {e}", file=sys.stderr)
         sys.exit(1)
 
-    mandatory_columns = ['v_gene', 'CDR3', 'j_genes', 'sample_name']
+    mandatory_columns = ['v_gene', 'CDR3', 'j_gene', 'sample_name', 'count']
     missing_columns = [col for col in mandatory_columns if col not in df.columns]
     if missing_columns:
         print(f"Error: Missing mandatory columns in '{file_path}': {', '.join(missing_columns)}", file=sys.stderr)
@@ -78,7 +83,7 @@ def main():
         '--input_repertoire',
         type=str,
         required=True,
-        help="Path to the CSV file containing TCR repertoire data (mandatory columns: v_gene, CDR3, j_genes, sample_name)."
+        help="Path to the CSV file containing TCR repertoire data (mandatory columns: v_gene, CDR3, j_gene, sample_name, count)."
     )
     parser.add_argument(
         '--gene_naming',
@@ -100,6 +105,19 @@ def main():
         required=True,
         help="Path to the directory where HLA imputation models are defined."
     )
+    parser.add_argument(
+        '--return_prob',
+        action='store_true',  # This is the key change!
+        required=False,       # Can be omitted as False is the default for optional args
+        help="If set, the program will return probabilities instead of hard (0/1) predictions for allele carriership."
+    )
+    
+    parser.add_argument(
+        '--normalize_prob',
+        action='store_true', # This is the key for a boolean flag
+        help="If set, normalizes the probabilities among the different alleles of a given locus (e.g., among HLA-A, HLA-B, etc.)."
+    )
+    
     parser.add_argument(
         '--path2write_results',
         type=str,
@@ -138,17 +156,21 @@ def main():
     ## 4. Run the predictions
     #------------------------
     imputer = HLAPredictor(path2models=args.path2models,model=args.model)
-    imputed_alleles = imputer.predict_HLA_for_a_sample_collection(repertoire_df)
-
-    # 5. translate the results into TSV
-    #------------------------------------
-    imputed_alleles_tsv = translate_to_tsv(imputed_alleles)
-
-    # 6. write the results 
+    if args.return_prob:
+        imputed_alleles = imputer.predict_HLA_for_a_sample_collection_prob(repertoire_df)
+        if args.normalize_prob:
+            imputed_alleles_tsv = normalise_by_softmax(translate_probabilities_to_tsv(imputed_alleles))
+        else:
+            imputed_alleles_tsv = translate_probabilities_to_tsv(imputed_alleles)
+    else:
+        imputed_alleles = imputer.predict_HLA_for_a_sample_collection(repertoire_df)
+        imputed_alleles_tsv = translate_prediction_to_tsv(imputed_alleles)
+    
+    # 5. write the results 
     #---------------------
     imputed_alleles_tsv.to_csv(args.path2write_results,sep='\t',index=False)
     
-    # 7. prent the end of execusion
+    # 6. report the end of execusion
     #------------------------------
     print("\nTool execution finished successfully!")
 
